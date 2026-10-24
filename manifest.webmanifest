@@ -1,0 +1,10 @@
+{
+  "name": "Prono Foot - Ligue 1 & Coupes d’Europe",
+  "short_name": "Prono Foot",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1512",
+  "theme_color": "#10251f",
+  "description": "Pronostics statistiques 1N2 de football",
+  "icons": []
+}

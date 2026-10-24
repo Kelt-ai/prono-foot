@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10251f">
+<meta name="description" content="Pronostics statistiques 1N2 Ligue 1 et Coupes d'Europe">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Prono Foot</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1512;--panel:#14241f;--muted:#a9bbb3;--accent:#72e0a3;--line:#294238}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f3f8f5;font:16px system-ui,-apple-system,Segoe UI,sans-serif}header{padding:24px 18px 18px;background:linear-gradient(145deg,#173c2e,#10251f);border-bottom:1px solid var(--line)}h1{font-size:25px;margin:0 0 6px}header p{color:#d0e5d9;margin:0;font-size:14px}.wrap{max-width:760px;margin:auto;padding:16px}.toolbar,.card,.settings{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:13px}label{display:block;color:var(--muted);font-size:13px;margin:7px 0}select,input,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0c1914;color:#fff;font:inherit}button{background:var(--accent);color:#092017;border:0;font-weight:750;cursor:pointer;margin-top:8px}button.secondary{background:#243b31;color:#f3f8f5;border:1px solid #426353}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.matchtop{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}.teams{font-size:18px;font-weight:750;margin:13px 0}.probs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.prob{background:#0c1914;border:1px solid var(--line);border-radius:10px;text-align:center;padding:10px 3px}.prob strong{display:block;font-size:22px;color:var(--accent)}.prob span{font-size:12px;color:var(--muted)}.note,.status{font-size:13px;color:var(--muted);line-height:1.5}.error{color:#ffb8ad}.hidden{display:none}.foot{text-align:center;font-size:12px;color:var(--muted);padding:12px}@media(min-width:620px){.wrap{padding:24px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>⚽ Prono Foot</h1><p>Ligue 1 & Coupes d’Europe · Pronostics 1N2</p></div></header>
+<main class="wrap">
+<section class="settings">
+  <label for="token">Clé API football-data.org</label>
+  <input id="token" type="password" autocomplete="off" placeholder="Colle ici ton token API">
+  <p class="note">La clé est enregistrée uniquement sur cet appareil. Ne partage pas cette page avec ta clé préremplie. L’API peut limiter certaines compétitions selon ton offre.</p>
+  <div class="row"><button id="save">Enregistrer la clé</button><button class="secondary" id="forget">Effacer la clé</button></div>
+</section>
+<section class="toolbar">
+  <label for="comp">Compétition</label>
+  <select id="comp">
+    <option value="FL1">Ligue 1</option><option value="CL">Ligue des champions</option><option value="EL">Ligue Europa</option><option value="ECL">Ligue Conférence</option>
+  </select>
+  <div class="row"><button id="load">Charger les matchs</button><button class="secondary" id="refresh">Actualiser</button></div>
+  <p id="status" class="status">Ajoute ta clé API, puis charge les matchs.</p>
+</section>
+<section id="matches"></section>
+<p class="foot">Les probabilités sont des estimations statistiques, jamais des garanties. Modèle simplifié fondé sur les buts des derniers matchs disponibles.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const API='https://api.football-data.org/v4';
+let token=localStorage.getItem('football_token')||'';
+$('token').value=token;
+$('save').onclick=()=>{token=$('token').value.trim();if(token)localStorage.setItem('football_token',token);else localStorage.removeItem('football_token');$('status').textContent=token?'Clé enregistrée sur cet appareil.':'Saisis une clé API.';};
+$('forget').onclick=()=>{localStorage.removeItem('football_token');token='';$('token').value='';$('status').textContent='Clé effacée.';};
+$('load').onclick=loadMatches;$('refresh').onclick=loadMatches;
+async function api(path){const r=await fetch(API+path,{headers:{'X-Auth-Token':token}});if(!r.ok){let msg=`Erreur API ${r.status}`;if(r.status===403)msg='Accès refusé : clé invalide ou compétition non incluse dans ton offre.';if(r.status===429)msg='Limite de requêtes atteinte. Attends quelques minutes.';throw Error(msg)}return r.json()}
+function poisson(l){let a=[Math.exp(-l)];for(let i=1;i<=10;i++)a.push(a[i-1]*l/i);return a}
+function calc(h,a){let lh=Math.max(.25,Math.min(3.5,(h.gf/h.n+a.ga/a.n)/2+.18));let la=Math.max(.25,Math.min(3.5,(a.gf/a.n+h.ga/h.n)/2-.08));let hp=poisson(lh),ap=poisson(la),p=[0,0,0];for(let i=0;i<hp.length;i++)for(let j=0;j<ap.length;j++)p[i>j?0:i===j?1:2]+=hp[i]*ap[j];let s=p.reduce((x,y)=>x+y,0);return p.map(x=>Math.round(100*x/s))}
+async function stats(code,id){let d=await api(`/competitions/${code}/matches?status=FINISHED&limit=100`);let ms=(d.matches||[]).filter(m=>m.homeTeam.id===id||m.awayTeam.id===id).sort((a,b)=>b.utcDate.localeCompare(a.utcDate)).slice(0,8);let gf=0,ga=0,n=0;for(const m of ms){const sc=m.score.fullTime;if(sc.home==null||sc.away==null)continue;let home=m.homeTeam.id===id;gf+=home?sc.home:sc.away;ga+=home?sc.away:sc.home;n++}return n?{gf,ga,n}:{gf:1.2,ga:1.2,n:1}}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function loadMatches(){token=$('token').value.trim()||token;if(!token){$('status').textContent='Entre d’abord ta clé API.';return}$('status').textContent='Chargement des matchs…';$('matches').innerHTML='';try{const code=$('comp').value;const d=await api(`/competitions/${code}/matches?status=SCHEDULED&limit=20`);const ms=(d.matches||[]).sort((a,b)=>a.utcDate.localeCompare(b.utcDate));if(!ms.length){$('status').textContent='Aucun match programmé retourné par l’API.';return}$('status').textContent=`${ms.length} match(s) chargé(s). Appuie sur « Calculer » pour obtenir un pronostic.`;for(const m of ms){let dt=new Date(m.utcDate).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});let el=document.createElement('article');el.className='card';el.innerHTML=`<div class="matchtop"><span>${esc(m.competition?.name||$('comp').selectedOptions[0].textContent)}</span><span>${esc(dt)}</span></div><div class="teams">${esc(m.homeTeam.name)}<br><span style="color:var(--muted);font-size:13px">contre</span><br>${esc(m.awayTeam.name)}</div><button data-id="${m.id}">Calculer le pronostic 1N2</button><div class="result"></div>`;el.querySelector('button').onclick=async e=>{const b=e.currentTarget;b.disabled=true;b.textContent='Analyse…';const out=el.querySelector('.result');try{const [h,a]=await Promise.all([stats(code,m.homeTeam.id),stats(code,m.awayTeam.id)]);const p=calc(h,a);out.innerHTML=`<div class="probs"><div class="prob"><strong>${p[0]}%</strong><span>1 · Domicile</span></div><div class="prob"><strong>${p[1]}%</strong><span>N · Nul</span></div><div class="prob"><strong>${p[2]}%</strong><span>2 · Extérieur</span></div></div><p class="note">Estimation calculée à partir des derniers résultats disponibles. Elle ne garantit pas l’issue du match.</p>`}catch(err){out.innerHTML=`<p class="note error">${esc(err.message)}</p>`}finally{b.disabled=false;b.textContent='Recalculer le pronostic'}};$('matches').appendChild(el)}}catch(e){$('status').textContent=e.message;$('status').classList.add('error')}}
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body></html>

@@ -1,0 +1,30 @@
+PRONO FOOT — VERSION ANDROID PWA
+
+Cette version est conçue pour Android et ne nécessite pas Windows pour l’utilisation quotidienne.
+C’est une application web installable (PWA), pas un APK natif. Elle doit être hébergée sur une URL HTTPS
+pour permettre l’installation depuis Chrome et le fonctionnement du service worker.
+
+FICHIERS
+- index.html : interface mobile et moteur 1N2
+- manifest.webmanifest : métadonnées d’installation
+- sw.js : cache de base hors ligne
+
+INSTALLATION
+1. Obtiens une clé API sur https://www.football-data.org/ (vérifie les compétitions couvertes).
+2. Héberge les trois fichiers sur un hébergement statique HTTPS, par exemple GitHub Pages.
+   Depuis Android, tu peux utiliser le site GitHub dans Chrome pour créer un dépôt et téléverser les fichiers.
+3. Ouvre l’URL HTTPS de la page sur ton Samsung Galaxy A42 avec Chrome.
+4. Menu ⋮ > Installer l’application ou Ajouter à l’écran d’accueil.
+5. Ouvre Prono Foot, saisis ton token API et appuie sur Enregistrer la clé.
+6. Choisis une compétition puis Charge les matchs. Appuie sur Calculer pour obtenir le 1N2.
+
+CONFIDENTIALITÉ
+Le token est conservé dans le stockage local du navigateur de cet appareil. Le code appelle l’API directement
+depuis le téléphone. N’utilise pas cette méthode pour un service public multi-utilisateur : pour une app publique,
+il faut un serveur intermédiaire afin de protéger la clé API.
+
+LIMITES
+- La disponibilité de Ligue Europa et Ligue Conférence dépend de l’accès API; vérifie la couverture.
+- Le modèle est simple et utilise jusqu’aux huit derniers matchs disponibles par équipe.
+- Les probabilités sont indicatives, non garanties.
+- Les matchs sont récupérés en direct quand tu appuies sur Charger/Actualiser; aucune actualisation en arrière-plan.
